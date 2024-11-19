@@ -1,12 +1,13 @@
 "use client";
+import Navbar from '@/components/Navbar';
 import { useState } from 'react';
 import { createWorker } from 'tesseract.js';
 
 export default function Home() {
     const [file, setFile] = useState<File | null>(null);
+    const [previewURL, setPreviewURL] = useState<string | null>(null);
     const [text, setText] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState<boolean>(false);
-    const [aiContent, setAiContent] = useState<string>('');
 
     const [worksheets, setWorksheets] = useState<Array<{ maxMarks: number; realMarks: number }>>(
         new Array(10).fill({ maxMarks: 30, realMarks: 0 })
@@ -26,6 +27,9 @@ export default function Home() {
         const uploadedFile = event.target.files?.[0];
         if (uploadedFile) {
             setFile(uploadedFile);
+            const preview = URL.createObjectURL(uploadedFile);
+            setPreviewURL(preview);
+
             setIsProcessing(true);
             setText('');
 
@@ -78,10 +82,11 @@ export default function Home() {
             setLabMST(parseFloat(practicalMSTMatch[2]));
         }
 
-        const quizMatch = text.match(/Quiz\s*(\w+)\s*(\w+)/); // Update for non-numeric value
+        const quizMatch = text.match(/Quiz\s*(\d+)\s*(\d+(\.\d+)?)/); // Support for decimal marks
         if (quizMatch) {
-            setQuiz(quizMatch[2]);
+            setQuiz(parseFloat(quizMatch[2])); // Converts the string to a number
         }
+        
 
         const assignmentMatch = text.match(/Assignment\/PBL\s*(\d+)\s*(\d+)/);
         if (assignmentMatch) {
@@ -166,172 +171,158 @@ export default function Home() {
     };
 
     return (
-        <div className="flex items-center justify-center min-h-screen bg-gray-100 p-6">
-            <div className="w-full  p-8 bg-white rounded-lg shadow-lg space-y-6">
-                <h1 className="text-3xl font-bold text-center text-indigo-600">Image to Marks Calculator</h1>
-
-                <div className="flex justify-center">
-                    <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        disabled={isProcessing}
-                        className="file:border-2 file:border-gray-300 file:rounded-md file:px-4 file:py-2 file:bg-indigo-100 file:text-indigo-700 hover:file:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    />
-                </div>
-
-                {isProcessing && <p className="text-center text-yellow-600">Processing image...</p>}
-
-                {text && !isProcessing && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg shadow-md">
-                        <h3 className="text-xl font-semibold text-gray-700">Extracted Text:</h3>
-                        <p className="text-lg text-gray-600">{text}</p>
-                    </div>
-                )}
-
-                {!text && !isProcessing && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-                        <p>Upload an image to extract text.</p>
-                    </div>
-                )}
-
-                {aiContent && !isProcessing && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center text-gray-700">
-                        <p>AI-Generated Content: {aiContent}</p>
-                    </div>
-                )}
-
-                {/* Input Fields for Marks */}
-                <h3 className="text-xl font-semibold text-gray-700">Update Marks</h3>
-                <div className=" grid grid-cols-2 gap-4 w-1/2 mt-6">
-                    {worksheets.map((worksheet, index) => (
-                        <div key={index} className="flex justify- items-center mt-2">
-                            <label className="text-gray-600">Worksheet {index + 1}:</label>
-                            <input
-                                type="number"
-                                value={worksheet.realMarks}
-                                onChange={(e) => {
-                                    const updatedWorksheets = [...worksheets];
-                                    updatedWorksheets[index].realMarks = parseFloat(e.target.value);
-                                    setWorksheets(updatedWorksheets);
-                                }}
-                                className="border border-gray-300 rounded-md p-2 w-1/4"
-                                max={worksheet.maxMarks}
-                            />
-                        </div>
-                    ))}
-
-                    {/* Other Input Fields */}
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Final Practical (Max: 40):</label>
-                        <input
-                            type="number"
-                            value={finalPractical}
-                            onChange={(e) => setFinalPractical(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={40}
-                        />
-                    </div>
-
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Attendance (Max: 2):</label>
-                        <input
-                            type="number"
-                            value={attendance}
-                            onChange={(e) => setAttendance(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={2}
-                        />
-                    </div>
-
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Quiz (Max: 4):</label>
-                        <input
-                            type="number"
-                            value={quiz}
-                            onChange={(e) => setQuiz(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={4}
-                        />
-                    </div>
-
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Surprise Test (Max: 12):</label>
-                        <input
-                            type="number"
-                            value={surpriseTest}
-                            onChange={(e) => setSurpriseTest(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={12}
-                        />
-                    </div>
-
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Lab MST (Max: 10):</label>
-                        <input
-                            type="number"
-                            value={labMST}
-                            onChange={(e) => setLabMST(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={10}
-                        />
-                    </div>
-
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Assignment (Max: 10):</label>
-                        <input
-                            type="number"
-                            value={assignment}
-                            onChange={(e) => setAssignment(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={10}
-                        />
-                    </div>
-
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Theory MST 1 (Max: 20):</label>
-                        <input
-                            type="number"
-                            value={theoryMST1}
-                            onChange={(e) => setTheoryMST1(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={20}
-                        />
-                    </div>
-
-                    <div className="mt-4">
-                        <label className="block text-gray-600">Theory MST 2 (Max: 20):</label>
-                        <input
-                            type="number"
-                            value={theoryMST2}
-                            onChange={(e) => setTheoryMST2(parseFloat(e.target.value))}
-                            className="border border-gray-300 rounded-md p-2 w-full"
-                            max={20}
-                        />
-                    </div>
-                </div>
-
-                <div className="mt-6">
-                    <button
-                        onClick={handleSubmit}
-                        className="w-full py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    >
-                        Submit and Calculate
-                    </button>
-                </div>
-
-                {totalScore !== null && !error && (
-                    <div className="mt-4 p-4 bg-gray-50 rounded-lg text-center text-xl font-semibold text-indigo-700">
-                        Total Score: {totalScore.toFixed(2)}
-                    </div>
-                )}
-
-                {error && (
-                    <div className="mt-4 p-4 bg-red-100 text-center text-red-600 rounded-lg">
-                        {error}
-                    </div>
-                )}
+        <div className="min-h-screen bg-gray-50 p-6">
+        {/* <Navbar /> */}
+        <div className="p-8 bg-white rounded-lg border border-gray-200 shadow-sm">
+          <h1 className="text-3xl font-bold text-center text-indigo-700">Hybrid Subject Marks Calculator</h1>
+          <h1 className="text-xl font-medium text-center text-gray-500">Subjects Like - DAA, CN</h1>
+          {isProcessing && <p className="text-center text-yellow-500">Processing image...</p>}
+      
+          <div className="flex justify-center mt-4">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleImageUpload}
+              disabled={isProcessing}
+              className="file:border file:border-gray-300 file:rounded-md file:px-4 file:py-2 file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+      
+          {previewURL && (
+            <div className="mt-4 flex justify-center">
+              <img
+                src={previewURL}
+                alt="Uploaded preview"
+                className="max-w-full h-auto border border-gray-300 rounded-md shadow-sm"
+              />
             </div>
+          )}
         </div>
+      
+        <h3 className="text-lg text-center mt-4 font-semibold text-gray-600">Verify Marks Extracted from the Image (Some Marks May Not Be Accurate)</h3>
+        <div className="grid grid-cols-2 w-full p-4 bg-gray-100 gap-4 mt-4 rounded-lg shadow-sm">
+          {worksheets.map((worksheet, index) => (
+            <div key={index} className="block">
+              <label className="block text-gray-700 font-medium">Worksheet {index + 1}:</label>
+              <input
+                type="number"
+                value={worksheet.realMarks}
+                onChange={(e) => {
+                  const updatedWorksheets = [...worksheets];
+                  updatedWorksheets[index].realMarks = parseFloat(e.target.value);
+                  setWorksheets(updatedWorksheets);
+                }}
+                className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                max={worksheet.maxMarks}
+              />
+            </div>
+          ))}
+        </div>
+      
+        <div className="w-full grid grid-cols-1 lg:grid-cols-2 bg-gray-100 gap-4 px-4 py-2 rounded-lg shadow-sm mt-4">
+          <div>
+            <label className="block text-gray-700 font-medium">Final Practical (Assume 25 as Worst):</label>
+            <input
+              type="number"
+              value={finalPractical}
+              onChange={(e) => setFinalPractical(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={40}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Attendance (Max: 2):</label>
+            <input
+              type="number"
+              value={attendance}
+              onChange={(e) => setAttendance(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={2}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Quiz (Max: 4):</label>
+            <input
+              type="number"
+              value={quiz}
+              onChange={(e) => setQuiz(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={4}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Surprise Test (Max: 12):</label>
+            <input
+              type="number"
+              value={surpriseTest}
+              onChange={(e) => setSurpriseTest(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={12}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Lab MST (Max: 10):</label>
+            <input
+              type="number"
+              value={labMST}
+              onChange={(e) => setLabMST(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={10}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Assignment (Max: 10):</label>
+            <input
+              type="number"
+              value={assignment}
+              onChange={(e) => setAssignment(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={10}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Theory MST 1 (Max: 20):</label>
+            <input
+              type="number"
+              value={theoryMST1}
+              onChange={(e) => setTheoryMST1(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={20}
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 font-medium">Theory MST 2 (Max: 20):</label>
+            <input
+              type="number"
+              value={theoryMST2}
+              onChange={(e) => setTheoryMST2(parseFloat(e.target.value))}
+              className="border border-gray-300 rounded-md p-2 w-full focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              max={20}
+            />
+          </div>
+        </div>
+      
+        <div className="mt-6">
+          <button
+            onClick={handleSubmit}
+            className="w-full py-2 px-4 bg-indigo-600 text-white font-medium rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            Submit and Calculate
+          </button>
+        </div>
+      
+        {totalScore !== null && !error && (
+          <div className="mt-4 p-4 bg-indigo-50 text-center text-indigo-700 font-medium rounded-lg shadow-md">
+            Total Score: {totalScore.toFixed(2)}
+          </div>
+        )}
+      
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 text-center text-red-600 rounded-lg shadow-md">
+            {error}
+          </div>
+        )}
+      </div>
+      
     );
 }
